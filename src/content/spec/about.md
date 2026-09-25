@@ -1,26 +1,27 @@
-# About Shirone
+# 关于 Silver（白银）
 
-Welcome to the demo site of **Shirone** (白音) — an expressive, anime-inspired blog theme built on the **Material 3 Expressive (M3E)** design system.
+**Silver（白银）** 是一个个人博客，记录技术探索、生活思考与创作点滴。
 
-::github{repo="LyraVoid/Shirone"}
+## 创建理念
 
-## ✦ Design & Philosophy
+「白银」二字，取自一种常被黄金光芒所掩盖的贵金属。它不张扬，却自有恒久的光泽；它沉稳内敛，却在岁月淬炼中愈发纯粹。这正是一座个人博客应有的姿态——不为喧嚣所动，只为沉淀与表达而存在。
 
-Shirone aims to combine the warmth of expressive anime aesthetics with the rigor of modern web engineering:
+我希望这里成为思想淬炼的工坊：把零散的灵感锻造成文字，把粗糙的念头打磨成见解。每一篇文章都是一次淬火，让认知在反复锤炼中趋于精纯。
 
-- **Dynamic Chromatic Spell**: Full dynamic HCT palette generation responding seamlessly to light/dark modes and user preferences with zero layout shifts.
-- **Seamless Shell Navigation**: Persistent application shell driven by Swup for continuous music playback, smooth page transitions, and preserved state.
-- **Rich Story Grimoire**: Markdown and MDX authoring with KaTeX math, Mermaid diagrams, interactive admonitions, expressive code blocks, and adaptive image galleries.
-- **Zero Extra Burden**: Optional integrations (comments, analytics, music widgets) load dynamically on demand — zero DOM footprint and zero bundle overhead when disabled.
+## 内容方向
 
-## ✦ Tech Stack
+- **技术笔记** —— 前端工程、系统设计与开发实践，重在原理与可复用的方法论
+- **阅读随笔** —— 书籍、文章与思想片段的整理与延伸
+- **生活记录** —— 日常观察、旅行见闻与值得驻足的瞬间
+- **创作实验** —— 代码、文字与图像之间的跨界尝试
 
-- **Framework**: [Astro 7](https://astro.build/) & [Svelte 5](https://svelte.dev/) (Runes-driven islands)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) & [Stylus](https://stylus-lang.com/)
-- **Design Standard**: [Material 3 Expressive](https://m3.material.io/)
-- **Typography**: Outfit & Yozai (悠哉圆体) with automated build-time subsetting
-- **Search Engine**: [Pagefind](https://pagefind.app/) offline full-text search
+## 「白银」之名
 
-## ✦ Credits
+之所以选择 Silver，而非更耀眼的 Gold 或更冷峻的 Iron，是因为：
 
-- **Font**: [Yozai Font (悠哉字体)](https://github.com/lxgw/yozai-font) by [lxgw](https://github.com/lxgw)
+- **纯粹**：白银的化学稳定性，象征对内容品质的坚持——拒绝浮夸，留存真实
+- **韧度**：白银是导电性最佳的金属，象征思想需要被传递、被联结
+- **延展**：白银的可塑性极强，象征思路应当被反复延展、不断重构
+- **月光**：白银自古与月相联，象征静谧的思考与不喧哗的表达
+
+愿这里的每一篇文字，都如白银一般——经得起时间打磨，亦能在静默中映照光亮。
