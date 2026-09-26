@@ -8,6 +8,8 @@
 
 A calm reading space for long-form writing, personal collections, and the small details that make a site feel like yours.
 
+<!-- deploy-trigger: force Vercel rebuild from clean e9dddb2 state -->
+
 [Live demo](https://shirone.mysqil.com/) · [Documentation](https://docs.shirone.mysqil.com/) · [Report an issue](https://github.com/LyraVoid/Shirone/issues)
 
 [English](./README.md) · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md)
