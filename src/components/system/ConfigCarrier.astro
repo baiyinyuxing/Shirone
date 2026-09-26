@@ -2,12 +2,19 @@
 import { resolveTextureOptions, siteConfig } from "@/config";
 
 const textureOptions = resolveTextureOptions();
+const wallpaper = siteConfig.wallpaperMode;
+const overlay = wallpaper.overlay ?? {};
 ---
 
 <div
 	id="config-carrier"
 	data-hue={siteConfig.themeColor.hue}
-	data-wallpaper-mode={siteConfig.wallpaperMode.defaultMode}
+	data-wallpaper-mode={wallpaper.defaultMode}
+	data-fullscreen-layout={wallpaper.defaultFullscreenLayout ?? "classic"}
+	data-overlay-opacity={overlay.opacity ?? 0.8}
+	data-overlay-blur={overlay.blur ?? 0}
+	data-overlay-card-opacity={overlay.cardOpacity ?? 0.6}
+	data-banner-waves-enabled={String(siteConfig.banner.waves.enable)}
 	{...(textureOptions.enable
 		? {
 				"data-texture-preset": textureOptions.defaultPreset,

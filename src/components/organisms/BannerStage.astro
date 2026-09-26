@@ -2,9 +2,10 @@
 import { getImage } from "astro:assets";
 import BannerWaves from "@components/molecules/BannerWaves.astro";
 import { resolveImageAsset } from "@utils/asset-utils";
+import { BANNER_MAX_BLUR_PX } from "@utils/banner-scroll";
 import { url } from "@utils/url-utils";
 import { Icon } from "astro-icon/components";
-import { siteConfig } from "@/config";
+import { profileConfig, siteConfig } from "@/config";
 import type { SidebarPage } from "@/types/sidebarConfig";
 
 interface Props {
@@ -81,9 +82,14 @@ const optimizeBannerImage = async (
 	};
 };
 
-function normalizeBannerSource(source: unknown, name: string): { light: string[]; dark: string[] } {
+function normalizeBannerSource(
+	source: unknown,
+	name: string,
+): { light: string[]; dark: string[] } {
 	if (Array.isArray(source)) {
-		const list = source.filter((item): item is string => typeof item === "string");
+		const list = source.filter(
+			(item): item is string => typeof item === "string",
+		);
 		return { light: list, dark: list };
 	}
 	if (typeof source === "object" && source !== null) {
@@ -94,15 +100,23 @@ function normalizeBannerSource(source: unknown, name: string): { light: string[]
 			);
 		}
 		return {
-			light: obj.light.filter((item): item is string => typeof item === "string"),
+			light: obj.light.filter(
+				(item): item is string => typeof item === "string",
+			),
 			dark: obj.dark.filter((item): item is string => typeof item === "string"),
 		};
 	}
 	return { light: [], dark: [] };
 }
 
-const desktopSource = normalizeBannerSource(siteConfig.banner.src.desktop, "desktop");
-const mobileSource = normalizeBannerSource(siteConfig.banner.src.mobile, "mobile");
+const desktopSource = normalizeBannerSource(
+	siteConfig.banner.src.desktop,
+	"desktop",
+);
+const mobileSource = normalizeBannerSource(
+	siteConfig.banner.src.mobile,
+	"mobile",
+);
 
 // 对图片按路径去重进行优化缓存
 const optimizationCache = new Map<string, Promise<ResponsiveBannerImage>>();
@@ -138,7 +152,15 @@ const mobileImages = {
 	dark: mobileDarkResponsive.map(({ fallback }) => fallback),
 };
 
-const dimOpacity = Math.min(Math.max(siteConfig.banner.dim.opacity, 0), 1);
+const bannerBrightness = Math.min(
+	Math.max(siteConfig.banner.brightness ?? 1.2, 1),
+	2,
+);
+// 提亮会压低白色标题的对比度；按亮度增量补偿遮罩（系数 < 1，不完全抵消，保留提亮观感）
+const dimOpacity = Math.min(
+	Math.max(siteConfig.banner.dim.opacity + (bannerBrightness - 1) * 0.3, 0),
+	1,
+);
 const rawSubtitles = siteConfig.banner.homeText.subtitle;
 const subtitleArray = Array.isArray(rawSubtitles)
 	? rawSubtitles
@@ -171,7 +193,7 @@ const initialMobileBanner = page === "home";
 	data-carousel-interval={String(Math.max(siteConfig.banner.carousel.interval, 3000))}
 	data-carousel-fade-duration={String(carouselFadeDuration)}
 	data-carousel-animation={carouselAnimation}
-	style={`--banner-fade-duration: ${carouselFadeDuration}ms;`}
+	style={`--banner-fade-duration: ${carouselFadeDuration}ms;--banner-brightness: ${bannerBrightness};--banner-blur-max: ${BANNER_MAX_BLUR_PX}px;`}
 	data-position={siteConfig.banner.position ?? "center"}
 	data-home-title={siteConfig.banner.homeText.title}
 	data-home-subtitles={JSON.stringify(subtitleArray)}
@@ -227,6 +249,14 @@ const initialMobileBanner = page === "home";
 			>
 				{defaultInitialSubtitle}
 			</p>
+			<nav class="banner-stage__contact-links" aria-label="Contact links">
+				{profileConfig.links.map((link) => (
+					<a href={link.url} target={link.url.startsWith("mailto:") ? undefined : "_blank"} rel={link.url.startsWith("mailto:") ? undefined : "me noopener noreferrer"}>
+						<Icon name={link.icon} aria-hidden="true" />
+						<span>{link.name}</span>
+					</a>
+				))}
+			</nav>
 		</div>
 	)}
 	<div class="banner-stage__copy banner-stage__copy--context" data-banner-context>
@@ -254,6 +284,10 @@ const initialMobileBanner = page === "home";
 <script>
 	import { resolveBannerState, type BannerViewport } from "@utils/banner-state";
 	import {
+		getBannerScrollTop,
+		resolveBannerScrollEffect,
+	} from "@utils/banner-scroll";
+	import {
 		playBannerMotion,
 		type BannerAnimationHandle,
 		type BannerAnimationPreset,
@@ -263,7 +297,10 @@ const initialMobileBanner = page === "home";
 		EASING_DECELERATE,
 		prefersReducedMotion,
 	} from "@utils/motion";
-	import { getStoredWallpaperMode } from "@utils/setting-utils";
+	import {
+		getStoredFullscreenLayout,
+		getStoredWallpaperMode,
+	} from "@utils/setting-utils";
 	import { WALLPAPER_MODE_CHANGE_EVENT, THEME_CHANGE_EVENT } from "@constants/constants";
 	import type { SidebarPage } from "@/types/sidebarConfig";
 
@@ -294,6 +331,7 @@ const initialMobileBanner = page === "home";
 	}
 
 	const stage = document.getElementById("banner-wrapper") as HTMLElement | null;
+	const stageMedia = stage?.querySelector<HTMLElement>(".banner-stage__media");
 	const layers = stage
 		? [...stage.querySelectorAll<HTMLImageElement>(".banner-stage__image")]
 		: [];
@@ -887,6 +925,7 @@ const initialMobileBanner = page === "home";
 		const page = pageOverride ?? currentPage();
 		const state = resolveBannerState({
 			mode: getStoredWallpaperMode(),
+			fullscreenLayout: getStoredFullscreenLayout(),
 			page,
 			viewport,
 			imageCount: images.length,
@@ -932,6 +971,56 @@ const initialMobileBanner = page === "home";
 		else stopRotation();
 	}
 
+	let bannerScrollFrame: number | null = null;
+
+	/**
+	 * 滚动渐进模糊：把滚动进度写成一个 CSS 变量交给 CSS 计算模糊与溢出量。
+	 * 只写变量、不逐帧改样式，量化在 resolveBannerScrollEffect 内完成，
+	 * 且 CSS 侧刻意不加 transition（transition 会逐帧插值，抵消量化收益）。
+	 */
+	function resetBannerScrollEffect() {
+		if (bannerScrollFrame !== null) {
+			window.cancelAnimationFrame(bannerScrollFrame);
+			bannerScrollFrame = null;
+		}
+		stageMedia?.style.removeProperty("--banner-scroll-progress");
+		stage?.classList.remove("banner-stage--blurred");
+	}
+
+	function applyBannerScrollEffect() {
+		bannerScrollFrame = null;
+		if (!stage || !stageMedia) return;
+		// 舞台隐藏时 offsetHeight 为 0，除法会产生 Infinity/NaN
+		if (stage.hidden || document.body.dataset.bannerVisible !== "true") {
+			resetBannerScrollEffect();
+			return;
+		}
+		// 覆盖透明模式下背景固定在视口，模糊由滑杆给定值 —— 不做滚动渐进
+		if (
+			document.documentElement.dataset.wallpaperMode === "overlay" ||
+			document.documentElement.dataset.wallpaperMode === "banner"
+		) {
+			resetBannerScrollEffect();
+			return;
+		}
+		// 先读后写：两个读操作都要在写 CSS 变量之前完成
+		const effect = resolveBannerScrollEffect(
+			getBannerScrollTop(),
+			stage.offsetHeight,
+			prefersReducedMotion(),
+		);
+		stageMedia.style.setProperty(
+			"--banner-scroll-progress",
+			String(effect.progress),
+		);
+		stage.classList.toggle("banner-stage--blurred", effect.active);
+	}
+
+	function scheduleBannerScrollEffect() {
+		if (bannerScrollFrame !== null) return;
+		bannerScrollFrame = window.requestAnimationFrame(applyBannerScrollEffect);
+	}
+
 	function scheduleNavigationSync(animateIn = false) {
 		if (runtime.navigationSyncFrame !== null) {
 			window.cancelAnimationFrame(runtime.navigationSyncFrame);
@@ -945,20 +1034,29 @@ const initialMobileBanner = page === "home";
 
 	if (stage) {
 		syncBanner();
+		// 首屏可能带着浏览器恢复的滚动位置载入
+		scheduleBannerScrollEffect();
 		if (!window.__shironeBannerBound) {
 			window.__shironeBannerBound = true;
 			window.addEventListener(WALLPAPER_MODE_CHANGE_EVENT, () => syncBanner());
 			window.addEventListener(THEME_CHANGE_EVENT, () => syncBanner());
+			window.addEventListener("scroll", scheduleBannerScrollEffect, {
+				passive: true,
+			});
 			window.addEventListener("resize", () => {
 				if (currentViewport() === "desktop" && stage?.hidden === false) {
 					scheduleContextTitleFit();
 				}
+				scheduleBannerScrollEffect();
 			});
 			window.matchMedia("(min-width: 1024px)").addEventListener("change", () => syncBanner());
 				window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => {
 					if (prefersReducedMotion()) {
 						stopLayerMotions();
 						showSubtitleImmediately();
+						resetBannerScrollEffect();
+					} else {
+						scheduleBannerScrollEffect();
 					}
 					syncBanner();
 				});
@@ -978,6 +1076,7 @@ const initialMobileBanner = page === "home";
 			});
 			document.addEventListener("swup:page:view", () => {
 				scheduleNavigationSync(true);
+				scheduleBannerScrollEffect();
 			});
 			document.fonts?.ready.then(scheduleContextTitleFit);
 		}
@@ -1008,6 +1107,9 @@ const initialMobileBanner = page === "home";
 			height: 100%
 			object-fit: cover
 			opacity: 0
+			/* 提亮放在图片层：颜色矩阵开销极低，且能让 __media 在静止态不产生滤镜与包含块，
+			   避免影响 ken-burns 运镜的合成路径 */
+			filter: brightness(var(--banner-brightness, 1))
 			will-change: opacity, transform
 			transform-origin: center center
 
@@ -1016,6 +1118,16 @@ const initialMobileBanner = page === "home";
 
 		.banner-stage__image--active
 			opacity: 1
+
+		/* 滚动渐进模糊：仅在滚动期间挂载类，静止态零滤镜、零合成层。
+		   刻意不加 filter transition —— 它会逐帧插值出新的计算值，等于每帧重跑一次模糊，
+		   使滚动进度的量化（见 utils/banner-scroll.ts）完全失去意义。 */
+		.banner-stage--blurred .banner-stage__media
+			filter: blur(calc(var(--banner-scroll-progress, 0) * var(--banner-blur-max, 12px)))
+			/* 模糊会采样元素边界外而在四边产生半透明羽化；溢出量随进度同向增长，
+			   静止态恰为 1，因此不改变原有取景 */
+			transform: scale(calc(1 + var(--banner-scroll-progress, 0) * 0.1))
+			will-change: filter
 
 		.banner-stage__scrim
 			z-index: 1
@@ -1062,6 +1174,37 @@ const initialMobileBanner = page === "home";
 				vertical-align: -0.12em
 				background: currentColor
 				animation: banner-subtitle-caret var(--m3e-duration-long) steps(1, end) infinite
+
+		.banner-stage__contact-links
+			display: flex
+			flex-wrap: wrap
+			justify-content: center
+			gap: 0.5rem
+			margin-top: 1rem
+			pointer-events: auto
+
+		.banner-stage__contact-links a
+			display: inline-flex
+			align-items: center
+			gap: 0.4rem
+			min-height: 2.5rem
+			padding: 0.45rem 0.8rem
+			border-radius: var(--shape-corner-full)
+			background: unquote("color-mix(in oklab, var(--scrim) 36%, transparent)")
+			color: inherit
+			font: var(--m3e-type-label-large)
+			text-decoration: none
+			transition: background-color var(--m3e-duration-short) var(--m3e-easing-standard), transform var(--m3e-duration-short) var(--m3e-easing-standard)
+
+			&:hover,
+			&:focus-visible
+				background: unquote("color-mix(in oklab, var(--scrim) 56%, transparent)")
+				transform: translateY(-1px)
+				outline: none
+
+			:global(svg)
+				width: 1.1rem
+				height: 1.1rem
 
 		.banner-stage__copy--context
 			inset: 50% auto auto 50%
@@ -1132,6 +1275,60 @@ const initialMobileBanner = page === "home";
 	:global(html[data-wallpaper-mode="none"]) .banner-stage
 		display: none
 
+	/* 覆盖透明：图片固定铺满视口，内容从顶部开始直接盖在图上。
+	   `z-index: -1` 让整个舞台（含标题文案与遮罩）落到内容之下，高于纹理画布的 -20。
+	   必须清掉底色，否则不透明的 --surface-container-lowest 会把整页压暗。
+	   固定层宽度 = 初始包含块宽度，不含 scrollbar-gutter 预留槽位（见 rules/pitfalls.md §10.1） */
+	:global(html[data-wallpaper-mode="overlay"]) .banner-stage
+		position: fixed
+		inset: 0
+		height: 100vh
+		height: 100lvh
+		z-index: -1
+		background: transparent
+		pointer-events: none
+		opacity: var(--overlay-opacity, 0.8)
+		transition: opacity var(--m3e-duration-long) var(--m3e-easing-standard)
+
+	/* 覆盖透明：模糊由滑杆给定，与滚动无关 */
+	:global(html[data-wallpaper-mode="overlay"]) .banner-stage__media
+		filter: blur(var(--overlay-blur, 0px))
+		transform: scale(1.08)
+
+	/* 全屏壁纸 · 视差：固定铺满视口，基础模糊 + 滚动叠加 */
+	:global(html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-stage
+		position: fixed
+		inset: 0
+		height: 100vh
+		height: 100lvh
+		z-index: 0
+		background: transparent
+		pointer-events: none
+
+	:global(html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-stage__media
+		filter: blur(calc(var(--banner-scroll-progress, 0) * var(--banner-blur-max, 12px)))
+		transform: scale(calc(1 + var(--banner-scroll-progress, 0) * 0.1))
+		will-change: filter
+
+	/* 固定背景模式下舞台是整页壁纸而非首屏 hero：居中排布的标题文案会永远悬在
+	   视口中央、从内容后面透出来，必须隐藏（上游未处理此点）。
+	   需带上 .banner-stage 以提高特异性，压过下方的
+	   `.banner-stage[data-copy-mode=…] .banner-stage__copy--…{display:flex}` */
+	:global(html[data-wallpaper-mode="overlay"]) .banner-stage .banner-stage__copy
+		display: none
+
+	/* 固定背景模式下顶栏是「透明 + 白字」并压在任意亮度的壁纸上，白字可能贴在
+	   明亮天空上无法辨认。顶部加一层固定黑渐变托底（DESIGN.md 允许图片覆盖层为
+	   可读性使用固定黑白），保证导航文案在任意壁纸上都可读 */
+	:global(html[data-wallpaper-mode="overlay"]) .banner-stage::after,
+	:global(html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-stage::after
+		content: ""
+		position: absolute
+		inset: 0 0 auto
+		height: 8rem
+		background: linear-gradient(to bottom, rgb(0 0 0 / 0.5), transparent)
+		pointer-events: none
+
 	@media (max-width: 1023.98px)
 		:global(body:not([data-current-page="home"])) .banner-stage
 			display: none
@@ -1156,9 +1353,31 @@ const initialMobileBanner = page === "home";
 		transition: none
 		animation: none
 
+	/* 站内动效开关只切换 html.motion-reduced，不派发任何事件，媒体查询覆盖不到它，
+	   因此这里单独清掉滚动模糊与溢出缩放（两者必须一起清，否则会留下 10% 放大） */
+	:global(html.motion-reduced) .banner-stage--blurred .banner-stage__media
+		filter: none
+		transform: none
+		will-change: auto
+
+	:global(html.motion-reduced[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-stage__media
+		filter: none
+		transform: none
+		will-change: auto
+
 	@media (prefers-reduced-motion: reduce)
 		.banner-stage__image,
 		.banner-stage__copy p[data-subtitle-state="typing"]::after
 			transition: none
 			animation: none
+
+		.banner-stage--blurred .banner-stage__media
+			filter: none
+			transform: none
+			will-change: auto
+
+		:global(html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-stage__media
+			filter: none
+			transform: none
+			will-change: auto
 </style>

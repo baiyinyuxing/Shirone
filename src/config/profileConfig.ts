@@ -6,8 +6,13 @@ import { withUserConfig } from "../utils/config-overlay.ts";
  * 类型见 src/types/config.ts。
  */
 export const profileConfig: ProfileConfig = withUserConfig("profile", {
-	avatar: "assets/images/demo-avatar.webp", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+	avatar: "assets/images/demo-avatar.gif", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	name: "Silver",
 	bio: "淬炼如银，光而不耀",
-	links: [],
+	links: [
+		{ name: "GitHub", url: "https://github.com/baiyinyuxing", icon: "fa6-brands:github" },
+		{ name: "Gitee", url: "https://gitee.com/silver_yuxing", icon: "simple-icons:gitee" },
+		{ name: "QQ", url: "/assets/contact/qq-36710994.jpg", icon: "fa6-brands:qq" },
+		{ name: "Email", url: "mailto:Silver.xhy@outlook.com", icon: "material-symbols:mail-outline-rounded" },
+	],
 });

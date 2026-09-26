@@ -3,7 +3,27 @@ export type { PermalinkConfig } from "./permalinkConfig.ts";
 import type { AUTO_MODE, DARK_MODE, LIGHT_MODE } from "@constants/constants";
 import type { TextureConfig } from "./textureConfig";
 
-export type WallpaperMode = "banner" | "none";
+/**
+ * 页面背景模式：
+ * - `banner` 横幅：首屏 100vh 的 hero，内容从下方开始
+ * - `fullscreen` 全屏壁纸：图片铺满视口，由 `FullscreenLayout` 决定是固定视差还是揭幕式 hero
+ * - `overlay` 覆盖透明：图片固定铺满视口，内容从顶部开始直接盖在图上
+ * - `none` 纯色：不渲染背景图
+ */
+export type WallpaperMode = "banner" | "fullscreen" | "overlay" | "none";
+
+/** 全屏壁纸的子布局：`hero` 视差固定 / `classic` 揭幕式 hero */
+export type FullscreenLayout = "classic" | "hero";
+
+/** 覆盖透明模式的默认参数（访客可在显示设置中覆盖） */
+export type WallpaperOverlayConfig = {
+	/** 壁纸不透明度，0–1（默认 0.8） */
+	opacity?: number;
+	/** 背景模糊半径 px，0–20（默认 0） */
+	blur?: number;
+	/** 半透明卡片不透明度，0–1（默认 0.6） */
+	cardOpacity?: number;
+};
 
 export type TopAppBarContentAlign = "left" | "center";
 
@@ -35,6 +55,8 @@ export type BannerConfig = {
 		mobile: BannerSourceValue;
 	};
 	position?: "top" | "center" | "bottom";
+	/** 背景图亮度倍率（1–2，默认 1.2）。提高亮度会自动补偿遮罩以维持标题对比度。 */
+	brightness?: number;
 	dim: {
 		enable: boolean;
 		opacity: number;
@@ -113,6 +135,10 @@ export type SiteConfig = {
 	};
 	wallpaperMode: {
 		defaultMode: WallpaperMode;
+		/** 全屏壁纸的子布局默认值（默认 "classic"） */
+		defaultFullscreenLayout?: FullscreenLayout;
+		/** 覆盖透明模式的默认参数 */
+		overlay?: WallpaperOverlayConfig;
 	};
 	/** 页面背景纹理系统配置，支持布尔值直接开关或详细配置对象 */
 	texture?: boolean | TextureConfig;

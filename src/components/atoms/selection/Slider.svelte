@@ -10,16 +10,23 @@ let {
 	max = 100,
 	step = 1,
 	label = "",
+	displayValue,
 }: {
 	value?: number;
 	min?: number;
 	max?: number;
 	step?: number;
 	label?: string;
+	displayValue?: string;
 } = $props();
 </script>
 
-<div class="m3-slider-wrap">
+<div class="m3-slider-field">
+    <div class="m3-slider-field__heading">
+        <span>{label}</span>
+        <output>{displayValue ?? value}</output>
+    </div>
+    <div class="m3-slider-wrap">
     <input
         type="range"
         {min}
@@ -29,9 +36,34 @@ let {
         aria-label={label}
         class="m3-slider"
     />
+    </div>
 </div>
 
 <style lang="stylus">
+.m3-slider-field
+    display: flex
+    flex-direction: column
+    gap: var(--m3e-space-2)
+    min-width: 0
+    padding: var(--m3e-space-3)
+    border-radius: var(--shape-corner-m)
+    background: var(--surface-container-low)
+
+    &__heading
+        display: flex
+        align-items: baseline
+        justify-content: space-between
+        gap: var(--m3e-space-2)
+        color: var(--on-surface)
+        font: var(--m3e-type-label-large)
+
+        span
+            min-width: 0
+
+        output
+            flex: none
+            color: var(--on-surface-variant)
+
 .m3-slider-wrap
     height: 1.5rem
     padding: 0 0.25rem

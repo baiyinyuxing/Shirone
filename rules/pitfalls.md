@@ -553,6 +553,8 @@ snapshotPathTemplate: "{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg
 
 **不要顺手把满宽图层往槽位里撑**：顶栏、纹理画布这些满宽 fixed 图层的盒子宽度就是初始包含块宽度，槽位在盒子之外。直接加负 `margin-inline-end` 会连内容一起推出去（顶栏右侧图标组会横移 15px，反而是新的抖动）。真要像素级对齐，得改成「伪元素画 surface 并单独延伸」，收益只有上述 Δ≈2 的色阶，不值得。
 
+**整页壁纸模式（`wallpaper-mode: overlay` / `fullscreen` + `hero`）**：这两种模式下 `.banner-stage` 变成 `position: fixed; inset: 0`，与纹理画布同为满宽 fixed 图层，因此右侧同样会留一条 `--page-bg` 色的槽位竖条 —— 这是既有取舍，不要试图用负 margin 消除。另外这两种模式下**文档高度不再恒高于视口**（内容从 `5.5rem` 开始），槽位预留 `scrollbar-gutter: stable` 才是宽度稳定的唯一保障，不要因为「背景固定了」就以为可以去掉它。
+
 **延伸**：以 `body.style.overflow = "hidden"` 锁定页面滚动的代码（代码树全屏、Mermaid 全屏）必须走 `src/utils/scroll-lock.ts`，不得内联直接改。该工具**不能**用 `window.innerWidth - documentElement.clientWidth` 判断是否需要补偿：槽位预留生效时该差值在锁定后会变成 0，但布局宽度根本没变，补偿会把 `#top-row` 白窄 15px（1265 → 1250）。正确做法是用 `body` 的 border box 宽度锁定前后各测一次，只在真的变宽时补等量内边距。补偿只覆盖 `body` 内容盒内的常规流元素（`#top-row`、顶部栏），绝对定位的 `#main-layout` 只能靠槽位预留兜底。
 
 **防回归**：`tests/site/layout-stability.spec.ts`（覆盖槽位预留、长短页宽度一致、长/短页双向导航、壁纸模式切换、页面滚动锁、无槽位时的补偿）。注意 Playwright 默认带 `--hide-scrollbars`，滚动条宽度为 0 时该契约完全不可观测，spec 必须显式关掉该默认参数。

@@ -237,6 +237,9 @@ enum I18nKey {
 	musicErrorInvalidTrack = "musicErrorInvalidTrack",
 
 	themeColor = "themeColor",
+	displayTabAppearance = "displayTabAppearance",
+	displayTabWallpaper = "displayTabWallpaper",
+	displayTabEffects = "displayTabEffects",
 	colorStyle = "colorStyle",
 	colorSpec = "colorSpec",
 
@@ -261,7 +264,16 @@ enum I18nKey {
 
 	wallpaperMode = "wallpaperMode",
 	wallpaperModeBanner = "wallpaperModeBanner",
+	wallpaperModeFullscreen = "wallpaperModeFullscreen",
+	wallpaperModeOverlay = "wallpaperModeOverlay",
 	wallpaperModeNone = "wallpaperModeNone",
+	wallpaperFullscreenLayout = "wallpaperFullscreenLayout",
+	wallpaperFullscreenLayoutClassic = "wallpaperFullscreenLayoutClassic",
+	wallpaperFullscreenLayoutHero = "wallpaperFullscreenLayoutHero",
+	wallpaperOverlayOpacity = "wallpaperOverlayOpacity",
+	wallpaperOverlayBlur = "wallpaperOverlayBlur",
+	wallpaperOverlayCardOpacity = "wallpaperOverlayCardOpacity",
+	bannerWaves = "bannerWaves",
 
 	texturePreset = "texturePreset",
 	texturePresetNone = "texturePresetNone",

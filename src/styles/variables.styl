@@ -166,10 +166,21 @@ define({
   --page-bg: var(--surface-container-low)
   --card-bg: var(--surface-container-lowest)
   --float-panel-bg: var(--surface-container)
+  /* 半透明卡片底色：仅在 data-card-transparent="true"（覆盖透明 / 全屏壁纸 hero）下
+     替换 --card-bg，不透明度由 --card-transparent-opacity 控制。
+     这是「卡片透明度」功能的唯一注入点，31 处 color="var(--card-bg)" 与
+     24 处直接消费 background: var(--card-bg) 因此自动生效。 */
+  --card-bg-transparent: unquote("color-mix(in srgb, var(--surface-container-lowest) calc(var(--card-transparent-opacity, 0.6) * 100%), transparent)")
 :root.dark
   --page-bg: var(--surface)
   --card-bg: var(--surface-container-high)
   --float-panel-bg: var(--surface-container)
+  --card-bg-transparent: unquote("color-mix(in srgb, var(--surface-container-high) calc(var(--card-transparent-opacity, 0.6) * 100%), transparent)")
+
+/* 半透明卡片是派生状态，由 setting-utils 的 shouldUseTransparentCards() 决定，
+   首屏由 Layout 内联脚本在绘制前落位 */
+:root[data-card-transparent="true"]
+  --card-bg: var(--card-bg-transparent)
 
 /* ============================================================
    M3E 响应式 / 间距 / 密度令牌

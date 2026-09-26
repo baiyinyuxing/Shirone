@@ -22,19 +22,32 @@ import {
 	resolveScheme,
 } from "@utils/mc-utils";
 import {
+	getDefaultBannerWavesEnabled,
+	getDefaultFullscreenLayout,
 	getDefaultHue,
+	getDefaultOverlayBlur,
+	getDefaultOverlayCardOpacity,
+	getDefaultOverlayOpacity,
 	getDefaultTextureOpacity,
 	getDefaultTexturePreset,
 	getHue,
 	getMotionPreference,
+	getStoredBannerWavesEnabled,
+	getStoredFullscreenLayout,
+	getStoredOverlayBlur,
+	getStoredOverlayCardOpacity,
+	getStoredOverlayOpacity,
 	getStoredTextureOpacity,
 	getStoredTexturePreset,
 	getStoredWallpaperMode,
+	setBannerWavesEnabled,
+	setFullscreenLayout,
 	setHue,
 	setMotionPreference,
 	setTextureOpacity,
 	setTexturePreset,
 	setWallpaperMode,
+	setWallpaperOverlay,
 } from "@utils/setting-utils";
 import { getSpec, getStyle, setSpec, setStyle } from "@utils/theme-utils";
 import { onMount } from "svelte";
@@ -44,7 +57,7 @@ import {
 	resolveDisplaySettings,
 	siteConfig,
 } from "@/config";
-import type { WallpaperMode } from "@/types/config";
+import type { FullscreenLayout, WallpaperMode } from "@/types/config";
 import type { PostListMode } from "@/types/postListConfig";
 import type { TexturePreset } from "@/types/textureConfig";
 
@@ -64,6 +77,7 @@ let dark = $state(
 );
 
 let motionReduced = $state(false);
+let activeTab = $state<"appearance" | "wallpaper" | "effects">("appearance");
 
 // 文章列表布局（list/grid）：初始值取访客偏好，变化时存储 + FLIP 重排
 const defaultLayoutMode = defaultMode();
@@ -72,6 +86,30 @@ let lastAppliedMode = postListMode;
 const defaultWallpaperMode = siteConfig.wallpaperMode.defaultMode;
 let wallpaperMode = $state<WallpaperMode>(getStoredWallpaperMode());
 let lastAppliedWallpaperMode = wallpaperMode;
+
+// 全屏壁纸子布局（classic/hero）
+const defaultFullscreenLayout = getDefaultFullscreenLayout();
+let fullscreenLayout = $state<FullscreenLayout>(getStoredFullscreenLayout());
+let lastAppliedFullscreenLayout = fullscreenLayout;
+
+// 覆盖透明参数：壁纸透明度 / 背景模糊 / 卡片透明度
+const defaultOverlayOpacity = getDefaultOverlayOpacity();
+const defaultOverlayBlur = getDefaultOverlayBlur();
+const defaultOverlayCardOpacity = getDefaultOverlayCardOpacity();
+let overlayOpacity = $state(getStoredOverlayOpacity());
+let overlayBlur = $state(getStoredOverlayBlur());
+let overlayCardOpacity = $state(getStoredOverlayCardOpacity());
+const overlayKey = (o: number, b: number, c: number) => `${o}|${b}|${c}`;
+let lastAppliedOverlay = overlayKey(
+	overlayOpacity,
+	overlayBlur,
+	overlayCardOpacity,
+);
+
+// 横幅水波纹访客开关（站长配置 banner.waves.enable 为初始默认值）
+const defaultBannerWaves = getDefaultBannerWavesEnabled();
+let bannerWaves = $state(getStoredBannerWavesEnabled());
+let lastAppliedBannerWaves = bannerWaves;
 
 // 背景纹理预设与浓度
 const defaultTexturePreset = getDefaultTexturePreset();
@@ -117,6 +155,13 @@ const textureOptions: {
 	},
 ];
 
+const wallpaperOptions: { value: WallpaperMode; labelKey: I18nKey; icon: string }[] = [
+	{ value: "banner", labelKey: I18nKey.wallpaperModeBanner, icon: "material-symbols:image-outline-rounded" },
+	{ value: "fullscreen", labelKey: I18nKey.wallpaperModeFullscreen, icon: "material-symbols:wallpaper-outline-rounded" },
+	{ value: "overlay", labelKey: I18nKey.wallpaperModeOverlay, icon: "material-symbols:layers-outline-rounded" },
+	{ value: "none", labelKey: I18nKey.wallpaperModeNone, icon: "material-symbols:hide-image-outline-rounded" },
+];
+
 // 明暗切换时重算色卡（LightDarkSwitch 改 <html> 的 class）
 onMount(() => {
 	const observer = new MutationObserver(() => {
@@ -137,6 +182,11 @@ function confirmReset() {
 	spec = defaultSpec;
 	postListMode = defaultLayoutMode;
 	wallpaperMode = defaultWallpaperMode;
+	fullscreenLayout = defaultFullscreenLayout;
+	overlayOpacity = defaultOverlayOpacity;
+	overlayBlur = defaultOverlayBlur;
+	overlayCardOpacity = defaultOverlayCardOpacity;
+	bannerWaves = defaultBannerWaves;
 	texturePreset = defaultTexturePreset;
 	textureOpacity = defaultTextureOpacity;
 }
@@ -148,6 +198,11 @@ const isDirty = $derived(
 		spec !== defaultSpec ||
 		postListMode !== defaultLayoutMode ||
 		wallpaperMode !== defaultWallpaperMode ||
+		fullscreenLayout !== defaultFullscreenLayout ||
+		overlayOpacity !== defaultOverlayOpacity ||
+		overlayBlur !== defaultOverlayBlur ||
+		overlayCardOpacity !== defaultOverlayCardOpacity ||
+		bannerWaves !== defaultBannerWaves ||
 		texturePreset !== defaultTexturePreset ||
 		textureOpacity !== defaultTextureOpacity,
 );
@@ -168,6 +223,26 @@ $effect(() => {
 	if (wallpaperMode === lastAppliedWallpaperMode) return;
 	lastAppliedWallpaperMode = wallpaperMode;
 	setWallpaperMode(wallpaperMode);
+});
+$effect(() => {
+	if (fullscreenLayout === lastAppliedFullscreenLayout) return;
+	lastAppliedFullscreenLayout = fullscreenLayout;
+	setFullscreenLayout(fullscreenLayout);
+});
+$effect(() => {
+	const key = overlayKey(overlayOpacity, overlayBlur, overlayCardOpacity);
+	if (key === lastAppliedOverlay) return;
+	lastAppliedOverlay = key;
+	setWallpaperOverlay({
+		opacity: overlayOpacity,
+		blur: overlayBlur,
+		cardOpacity: overlayCardOpacity,
+	});
+});
+$effect(() => {
+	if (bannerWaves === lastAppliedBannerWaves) return;
+	lastAppliedBannerWaves = bannerWaves;
+	setBannerWavesEnabled(bannerWaves);
 });
 $effect(() => {
 	if (texturePreset === lastAppliedTexturePreset) return;
@@ -238,8 +313,23 @@ const stylePreviews = $derived(
 );
 </script>
 
-<div id="display-setting" class="float-panel float-panel-closed absolute transition-all w-80 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain m3-scroll-contain {className}">
+<div id="display-setting" class="float-panel float-panel-closed absolute transition-all w-[22rem] max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain m3-scroll-contain {className}">
     <PanelStack>
+        <div class="display-settings__tabs" role="tablist" aria-label={i18n(I18nKey.themeColor)}>
+            <button type="button" role="tab" aria-selected={activeTab === "appearance"} class:active={activeTab === "appearance"} onclick={() => (activeTab = "appearance")}>
+                <Icon icon="material-symbols:palette-outline-rounded" />
+                <span>{i18n(I18nKey.displayTabAppearance)}</span>
+            </button>
+            <button type="button" role="tab" aria-selected={activeTab === "wallpaper"} class:active={activeTab === "wallpaper"} onclick={() => (activeTab = "wallpaper")}>
+                <Icon icon="material-symbols:wallpaper-outline-rounded" />
+                <span>{i18n(I18nKey.displayTabWallpaper)}</span>
+            </button>
+            <button type="button" role="tab" aria-selected={activeTab === "effects"} class:active={activeTab === "effects"} onclick={() => (activeTab = "effects")}>
+                <Icon icon="material-symbols:auto-awesome-outline-rounded" />
+                <span>{i18n(I18nKey.displayTabEffects)}</span>
+            </button>
+        </div>
+        {#if activeTab === "appearance"}
         <!-- 段一：主题配色（色相 + 风格九宫格 + Color Spec） -->
         <div class="p-4 flex flex-col gap-3">
             <div class="flex flex-row gap-2 items-center justify-between">
@@ -263,7 +353,7 @@ const stylePreviews = $derived(
                          style={`background: ${currentColor}; box-shadow: inset 0 0 0 1px var(--outline-variant)`}></div>
                 </div>
             </div>
-            <Slider bind:value={hue} min={0} max={360} step={5} label={i18n(I18nKey.themeColor)} />
+            <Slider bind:value={hue} min={0} max={360} step={5} label={i18n(I18nKey.themeColor)} displayValue={`${hue}°`} />
 
             {#if displayConfig.colorStyle}
                 <div class="flex flex-col gap-2 pt-1">
@@ -308,20 +398,49 @@ const stylePreviews = $derived(
         </div>
 
         <!-- 段二：界面布局（页面背景 + 列表布局 + 背景纹理） -->
+        {/if}
+        {#if activeTab === "wallpaper"}
         {#if displayConfig.wallpaperMode || displayConfig.layoutMode || displayConfig.texture}
             <div class="p-4 flex flex-col gap-3">
                 {#if displayConfig.wallpaperMode}
                     <div class="flex flex-col gap-1.5">
                         <span class="display-settings__section-label">{i18n(I18nKey.wallpaperMode)}</span>
-                        <SegmentedButton
-                            options={[
-                                { value: "none", label: i18n(I18nKey.wallpaperModeNone) },
-                                { value: "banner", label: i18n(I18nKey.wallpaperModeBanner) },
-                            ]}
-                            bind:value={wallpaperMode}
-                            label={i18n(I18nKey.wallpaperMode)}
-                        />
+                        <div class="display-settings__wallpaper-modes" role="radiogroup" aria-label={i18n(I18nKey.wallpaperMode)}>
+                            {#each wallpaperOptions as option (option.value)}
+                                <button type="button" role="radio" data-value={option.value} aria-checked={wallpaperMode === option.value} class:selected={wallpaperMode === option.value} onclick={() => (wallpaperMode = option.value)}>
+                                    <Icon icon={option.icon} />
+                                    <span>{i18n(option.labelKey)}</span>
+                                </button>
+                            {/each}
+                        </div>
                     </div>
+
+                    <!-- 随背景模式变化的附属控件：每种背景只暴露对它真正生效的项 -->
+                    {#if wallpaperMode === "banner"}
+                        <div class="display-settings__toggle-row">
+                            <span>{i18n(I18nKey.bannerWaves)}</span>
+                            <Switch bind:checked={bannerWaves} label={i18n(I18nKey.bannerWaves)} icons />
+                        </div>
+                    {:else if wallpaperMode === "fullscreen"}
+                        <div class="flex flex-col gap-1.5">
+                            <span class="display-settings__section-label">{i18n(I18nKey.wallpaperFullscreenLayout)}</span>
+                            <SegmentedButton
+                                options={[
+                                    { value: "classic", label: i18n(I18nKey.wallpaperFullscreenLayoutClassic) },
+                                    { value: "hero", label: i18n(I18nKey.wallpaperFullscreenLayoutHero) },
+                                ]}
+                                bind:value={fullscreenLayout}
+                                label={i18n(I18nKey.wallpaperFullscreenLayout)}
+                            />
+                        </div>
+                        {#if fullscreenLayout === "hero"}
+                            <Slider bind:value={overlayCardOpacity} min={0} max={1} step={0.05} label={i18n(I18nKey.wallpaperOverlayCardOpacity)} displayValue={`${Math.round(overlayCardOpacity * 100)}%`} />
+                        {/if}
+                    {:else if wallpaperMode === "overlay"}
+                        <Slider bind:value={overlayOpacity} min={0} max={1} step={0.05} label={i18n(I18nKey.wallpaperOverlayOpacity)} displayValue={`${Math.round(overlayOpacity * 100)}%`} />
+                        <Slider bind:value={overlayBlur} min={0} max={20} step={1} label={i18n(I18nKey.wallpaperOverlayBlur)} displayValue={`${overlayBlur}px`} />
+                        <Slider bind:value={overlayCardOpacity} min={0} max={1} step={0.05} label={i18n(I18nKey.wallpaperOverlayCardOpacity)} displayValue={`${Math.round(overlayCardOpacity * 100)}%`} />
+                    {/if}
                 {/if}
 
                 {#if displayConfig.layoutMode}
@@ -364,6 +483,8 @@ const stylePreviews = $derived(
         {/if}
 
         <!-- 段三：动效与体验 -->
+        {/if}
+        {#if activeTab === "effects"}
         {#if displayConfig.reduceMotion}
             <div class="p-4 flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -373,11 +494,104 @@ const stylePreviews = $derived(
                 <Switch bind:checked={motionReduced} label={i18n(I18nKey.reduceMotion)} icons />
             </div>
         {/if}
+        {/if}
     </PanelStack>
 </div>
 
 
 <style lang="stylus">
+    .display-settings__wallpaper-modes
+        display: grid
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+        gap: var(--m3e-space-2)
+
+        button
+            display: flex
+            align-items: center
+            justify-content: center
+            gap: var(--m3e-space-2)
+            min-width: 0
+            min-height: 2.75rem
+            padding: var(--m3e-space-2)
+            border: 0
+            border-radius: var(--shape-corner-m)
+            background: var(--surface-container-low)
+            color: var(--on-surface-variant)
+            font: var(--m3e-type-label-medium)
+            cursor: pointer
+            transition: background-color var(--m3e-duration-short) var(--m3e-easing-standard), color var(--m3e-duration-short) var(--m3e-easing-standard)
+
+            &.selected
+                background: var(--secondary-container)
+                color: var(--on-secondary-container)
+
+            &:focus-visible
+                outline: 2px solid var(--primary)
+                outline-offset: 2px
+
+            :global(svg)
+                flex: none
+                width: 1.2rem
+                height: 1.2rem
+
+            span
+                min-width: 0
+                overflow-wrap: anywhere
+                text-align: center
+
+    .display-settings__toggle-row
+        display: flex
+        align-items: center
+        justify-content: space-between
+        gap: var(--m3e-space-3)
+        padding: var(--m3e-space-3)
+        border-radius: var(--shape-corner-m)
+        background: var(--surface-container-low)
+        font: var(--m3e-type-label-large)
+
+    .display-settings__tabs
+        position: sticky
+        top: 0
+        z-index: 2
+        display: grid
+        grid-template-columns: repeat(3, 1fr)
+        gap: 0.25rem
+        padding: 0.5rem
+        background: var(--surface-container-low)
+        border-radius: var(--shape-corner-l)
+
+        button
+            display: flex
+            align-items: center
+            justify-content: center
+            gap: 0.35rem
+            min-height: 2.5rem
+            min-width: 0
+            border: 0
+            border-radius: var(--shape-corner-m)
+            background: transparent
+            color: var(--on-surface-variant)
+            font: var(--m3e-type-label-large)
+            cursor: pointer
+            transition: background-color var(--m3e-duration-short) var(--m3e-easing-standard), color var(--m3e-duration-short) var(--m3e-easing-standard)
+
+            &:hover
+                background: unquote("color-mix(in oklab, var(--on-surface) 8%, transparent)")
+
+            &.active
+                background: var(--secondary-container)
+                color: var(--on-secondary-container)
+                box-shadow: var(--m3e-elevation-1)
+
+            :global(svg)
+                flex: none
+                width: 1.2rem
+                height: 1.2rem
+
+            span
+                min-width: 0
+                overflow-wrap: anywhere
+
     .display-settings__section-label
         font: var(--m3e-type-label-large)
         font-weight: 700
@@ -390,6 +604,8 @@ const stylePreviews = $derived(
         align-items: center
         justify-content: center
         gap: var(--m3e-space-1)
+        min-width: 0
+        min-height: 3.75rem
         padding: var(--m3e-space-2) var(--m3e-space-1)
         border: none
         border-radius: var(--shape-corner-m)
@@ -420,9 +636,8 @@ const stylePreviews = $derived(
 
         &__name
             max-width: 100%
-            overflow: hidden
-            text-overflow: ellipsis
-            white-space: nowrap
+            overflow-wrap: anywhere
+            text-align: center
 
     :global(#display-setting.m3-scroll-contain)
         scrollbar-width: thin

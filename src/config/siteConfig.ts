@@ -12,7 +12,7 @@ import { withUserConfig } from "../utils/config-overlay.ts";
 export const siteConfig: SiteConfig = withUserConfig("site", {
 	site: "https://blog.430523.xyz/",
 	base: "/",
-	title: "Silver",
+	title: "Hello,I'm Silver",
 	subtitle: "淬炼如银，光而不耀",
 	// 电脑端顶栏标题与导航内容区域："left" 左对齐，"center" 居中。
 	topAppBar: {
@@ -39,10 +39,26 @@ export const siteConfig: SiteConfig = withUserConfig("site", {
 		// 差异仅在调色板派生（库的 colorSpec 静态为 2025 委托）
 		spec: "2025",
 	},
-	// 默认页面背景模式："banner" 使用壁纸横幅，"none" 使用主题纯色。
+	// 默认页面背景模式：
+	// - "banner" 横幅：首屏 100vh 的 hero，内容从下方开始
+	// - "fullscreen" 全屏壁纸：图片铺满视口，子布局见下面的 defaultFullscreenLayout
+	// - "overlay" 覆盖透明：图片固定铺满视口，内容从顶部开始直接盖在图上
+	// - "none" 纯色：不渲染背景图
 	// 访客在“显示设置”中的选择会保存在浏览器中，并覆盖这里的默认值。
 	wallpaperMode: {
-		defaultMode: "banner",
+		defaultMode: "fullscreen",
+		// 全屏壁纸的子布局："classic" 揭幕式 hero（默认）| "hero" 视差固定背景。
+		// 仅在全屏壁纸模式下生效；hero 会让内容卡片转为半透明。
+		defaultFullscreenLayout: "hero",
+		// 覆盖透明模式的默认参数，访客可在显示设置中调节。
+		overlay: {
+			// 壁纸不透明度，0–1。
+			opacity: 0.8,
+			// 背景模糊半径（px），0–20。
+			blur: 0,
+			// 半透明卡片的不透明度，0–1；仅在覆盖透明与全屏壁纸 hero 下生效。
+			cardOpacity: 0.6,
+		},
 	},
 	// 页面背景纹理系统配置（5 大精美预设 + 零开销 HCT 动态取色）
 	texture: {
@@ -62,6 +78,9 @@ export const siteConfig: SiteConfig = withUserConfig("site", {
 		},
 		// 图片裁切焦点："top"、"center" 或 "bottom"。
 		position: "center",
+		// 背景图亮度倍率（1–2）。提高亮度会按增量自动补偿下方 dim 遮罩，以维持标题对比度；
+		// 设为 1 即恢复原始亮度。
+		brightness: 1.2,
 		dim: {
 			// 在图片上覆盖黑色遮罩以提高标题和顶部栏的对比度；opacity 范围为 0-1。
 			enable: true,
@@ -70,7 +89,7 @@ export const siteConfig: SiteConfig = withUserConfig("site", {
 		homeText: {
 			// 仅在首页 Banner 中显示，标题与副标题会上下居中排列。
 			enable: true,
-			title: "Silver",
+			title: "Hello,I'm Silver",
 			subtitle: [
 				"淬炼如银，光而不耀",
 				"于静谧中沉淀，于纯粹中见光",

@@ -64,7 +64,10 @@ variables.styl  --mc-* → 语义令牌（--primary、--surface-container-low…
 |---|---|
 | `--page-bg` | 页面背景（light: container-low / dark: surface） |
 | `--card-bg` | 卡片背景（light: container-lowest / dark: container-high） |
+| `--card-bg-transparent` | 半透明卡片背景（`color-mix` + `--card-transparent-opacity`），只在 `html[data-card-transparent="true"]` 下替换 `--card-bg` |
 | `--float-panel-bg` | 浮层面板背景（container） |
+| `--overlay-opacity` / `--overlay-blur` | 覆盖透明模式的壁纸不透明度与背景模糊半径（访客可在显示设置调节） |
+| `--card-transparent-opacity` | 半透明卡片的不透明度（0–1） |
 | `--btn-regular-bg/-hover/-active` | 常规按钮的层级渐升（container-low → container → high → highest） |
 | `--btn-plain-bg-hover/-active`、`--btn-card-bg-hover/-active` | 其他按钮层叠 |
 | `--deep-text` | 主色背景上的深色文字（= on-primary） |

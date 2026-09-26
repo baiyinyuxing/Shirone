@@ -82,6 +82,13 @@ const lightTheme =
 	expressiveCodeConfig.lightTheme ?? expressiveCodeConfig.theme;
 const darkTheme = expressiveCodeConfig.darkTheme ?? expressiveCodeConfig.theme;
 const defaultWallpaperMode = siteConfig.wallpaperMode.defaultMode;
+const defaultFullscreenLayout =
+	siteConfig.wallpaperMode.defaultFullscreenLayout ?? "classic";
+const defaultOverlayOpacity = siteConfig.wallpaperMode.overlay?.opacity ?? 0.8;
+const defaultOverlayBlur = siteConfig.wallpaperMode.overlay?.blur ?? 0;
+const defaultOverlayCardOpacity =
+	siteConfig.wallpaperMode.overlay?.cardOpacity ?? 0.6;
+const defaultBannerWavesEnabled = siteConfig.banner.waves.enable;
 const textureOptions = resolveTextureOptions();
 const defaultTexturePreset = textureOptions.defaultPreset;
 const defaultTextureOpacity = textureOptions.defaultOpacity;
@@ -161,7 +168,7 @@ const hasMonoFont =
 			/>
 		))}
 
-		<script is:inline define:vars={{DEFAULT_THEME, LIGHT_MODE, DARK_MODE, AUTO_MODE, BANNER_HEIGHT_EXTEND, configHue, lightTheme, darkTheme, defaultWallpaperMode, defaultTexturePreset, defaultTextureOpacity, textureEnabled}}>
+		<script is:inline define:vars={{DEFAULT_THEME, LIGHT_MODE, DARK_MODE, AUTO_MODE, BANNER_HEIGHT_EXTEND, configHue, lightTheme, darkTheme, defaultWallpaperMode, defaultFullscreenLayout, defaultOverlayOpacity, defaultOverlayBlur, defaultOverlayCardOpacity, defaultBannerWavesEnabled, defaultTexturePreset, defaultTextureOpacity, textureEnabled}}>
 			const theme = localStorage.getItem('theme') || DEFAULT_THEME;
 			let isDark = false;
 			switch (theme) {
@@ -188,10 +195,46 @@ const hasMonoFont =
 				document.documentElement.classList.add('motion-reduced');
 			}
 			const storedWallpaperMode = localStorage.getItem('wallpaper-mode');
-			const wallpaperMode = storedWallpaperMode === 'banner' || storedWallpaperMode === 'none'
+			const validWallpaperModes = ['banner', 'fullscreen', 'overlay', 'none'];
+			const wallpaperMode = validWallpaperModes.includes(storedWallpaperMode)
 				? storedWallpaperMode
 				: defaultWallpaperMode;
 			document.documentElement.dataset.wallpaperMode = wallpaperMode;
+
+			// 全屏壁纸子布局与半透明卡片开关：首帧前同步，避免闪烁
+			const storedFullscreenLayout = localStorage.getItem('wallpaper-fullscreen-layout');
+			const fullscreenLayout = storedFullscreenLayout === 'hero' || storedFullscreenLayout === 'classic'
+				? storedFullscreenLayout
+				: defaultFullscreenLayout;
+			document.documentElement.dataset.fullscreenLayout = fullscreenLayout;
+			// 半透明卡片是派生状态：覆盖透明恒开，全屏壁纸仅 hero 子布局开
+			document.documentElement.dataset.cardTransparent = String(
+				wallpaperMode === 'overlay' || (wallpaperMode === 'fullscreen' && fullscreenLayout === 'hero'),
+			);
+
+			// 横幅水波纹访客开关：站长配置 banner.waves.enable 作为初始默认值
+			const storedBannerWaves = localStorage.getItem('wallpaper-banner-waves');
+			document.documentElement.dataset.bannerWavesEnabled = String(
+				storedBannerWaves === null ? defaultBannerWavesEnabled : storedBannerWaves === 'true',
+			);
+
+			// 覆盖透明参数：壁纸透明度 / 背景模糊 / 半透明卡片不透明度
+			const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+			const storedOverlayOpacity = Number.parseFloat(localStorage.getItem('wallpaper-overlay-opacity') || '');
+			document.documentElement.style.setProperty(
+				'--overlay-opacity',
+				String(Number.isNaN(storedOverlayOpacity) ? defaultOverlayOpacity : clamp(storedOverlayOpacity, 0, 1)),
+			);
+			const storedOverlayBlur = Number.parseFloat(localStorage.getItem('wallpaper-overlay-blur') || '');
+			document.documentElement.style.setProperty(
+				'--overlay-blur',
+				`${Number.isNaN(storedOverlayBlur) ? defaultOverlayBlur : clamp(storedOverlayBlur, 0, 20)}px`,
+			);
+			const storedCardOpacity = Number.parseFloat(localStorage.getItem('wallpaper-overlay-card-opacity') || '');
+			document.documentElement.style.setProperty(
+				'--card-transparent-opacity',
+				String(Number.isNaN(storedCardOpacity) ? defaultOverlayCardOpacity : clamp(storedCardOpacity, 0, 1)),
+			);
 
 			if (textureEnabled) {
 				const storedTexturePreset = localStorage.getItem('texture-preset');
@@ -254,11 +297,11 @@ const hasMonoFont =
 	'banner-panel-overlap': `${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem`,
 }}>
 @reference "../styles/main.css";
+	:root {
+		--banner-stage-height: var(--banner-height-home);
+		--banner-content-top: calc(var(--banner-stage-height) - var(--banner-panel-overlap));
+	}
 	@layer components {
-		:root {
-			--banner-stage-height: var(--banner-height-home);
-			--banner-content-top: calc(var(--banner-stage-height) - var(--banner-panel-overlap));
-		}
 		#main-layout {
 			top: 5.5rem;
 			transition: top var(--m3e-duration-long) var(--m3e-easing-standard);
@@ -281,6 +324,10 @@ const hasMonoFont =
 	}
 	@media (min-width: 480px) and (max-width: 767.98px) { :root { --banner-stage-height: max(75vh, 31.25rem); } }
 	@media (min-width: 768px) and (max-width: 1023.98px) { :root { --banner-stage-height: max(70vh, 31.25rem); } }
+	html[data-wallpaper-mode="banner"] { --banner-stage-height: max(50vh, 20rem); }
+	html[data-wallpaper-mode="fullscreen"] { --banner-stage-height: 100vh; }
+	body[data-banner-layout="banner"] #main-layout { top: var(--banner-content-top); }
+	body[data-banner-layout="banner"] #top-row { height: calc(var(--banner-stage-height) - 4.5rem); }
 </style>
 
 <script>

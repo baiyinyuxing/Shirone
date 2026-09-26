@@ -1,7 +1,11 @@
 import {
 	AUTO_MODE,
+	BANNER_WAVES_CHANGE_EVENT,
+	BANNER_WAVES_KEY,
 	DARK_MODE,
 	DEFAULT_THEME,
+	FULLSCREEN_LAYOUT_KEY,
+	FULLSCREEN_LAYOUT_OPTIONS,
 	LIGHT_MODE,
 	TEXTURE_CHANGE_EVENT,
 	TEXTURE_OPACITY_KEY,
@@ -10,10 +14,22 @@ import {
 	THEME_CHANGE_EVENT,
 	WALLPAPER_MODE_CHANGE_EVENT,
 	WALLPAPER_MODE_KEY,
+	WALLPAPER_MODE_OPTIONS,
+	WALLPAPER_OVERLAY_BLUR_KEY,
+	WALLPAPER_OVERLAY_BLUR_RANGE,
+	WALLPAPER_OVERLAY_CARD_OPACITY_KEY,
+	WALLPAPER_OVERLAY_CARD_OPACITY_RANGE,
+	WALLPAPER_OVERLAY_CHANGE_EVENT,
+	WALLPAPER_OVERLAY_OPACITY_KEY,
+	WALLPAPER_OVERLAY_OPACITY_RANGE,
 } from "@constants/constants.ts";
 import { applyCurrentScheme } from "@utils/theme-utils";
 import { expressiveCodeConfig, siteConfig } from "@/config";
-import type { LIGHT_DARK_MODE, WallpaperMode } from "@/types/config";
+import type {
+	FullscreenLayout,
+	LIGHT_DARK_MODE,
+	WallpaperMode,
+} from "@/types/config";
 import type { TexturePreset } from "@/types/textureConfig";
 
 export function isTexturePreset(value: unknown): value is TexturePreset {
@@ -88,7 +104,10 @@ export function setTextureOpacity(opacity: number): void {
 }
 
 export function isWallpaperMode(value: unknown): value is WallpaperMode {
-	return value === "banner" || value === "none";
+	return (
+		typeof value === "string" &&
+		(WALLPAPER_MODE_OPTIONS as readonly string[]).includes(value)
+	);
 }
 
 export function getDefaultWallpaperMode(): WallpaperMode {
@@ -105,8 +124,187 @@ export function getStoredWallpaperMode(): WallpaperMode {
 export function setWallpaperMode(mode: WallpaperMode): void {
 	localStorage.setItem(WALLPAPER_MODE_KEY, mode);
 	document.documentElement.dataset.wallpaperMode = mode;
+	applyCardTransparent();
 	window.dispatchEvent(
 		new CustomEvent(WALLPAPER_MODE_CHANGE_EVENT, { detail: { mode } }),
+	);
+}
+
+/* ---------- 全屏壁纸子布局 ---------- */
+
+export function isFullscreenLayout(value: unknown): value is FullscreenLayout {
+	return (
+		typeof value === "string" &&
+		(FULLSCREEN_LAYOUT_OPTIONS as readonly string[]).includes(value)
+	);
+}
+
+export function getDefaultFullscreenLayout(): FullscreenLayout {
+	const fallback = siteConfig.wallpaperMode.defaultFullscreenLayout ?? "classic";
+	const value =
+		document.getElementById("config-carrier")?.dataset.fullscreenLayout;
+	return isFullscreenLayout(value) ? value : fallback;
+}
+
+export function getStoredFullscreenLayout(): FullscreenLayout {
+	const value = localStorage.getItem(FULLSCREEN_LAYOUT_KEY);
+	return isFullscreenLayout(value) ? value : getDefaultFullscreenLayout();
+}
+
+export function setFullscreenLayout(layout: FullscreenLayout): void {
+	localStorage.setItem(FULLSCREEN_LAYOUT_KEY, layout);
+	document.documentElement.dataset.fullscreenLayout = layout;
+	applyCardTransparent();
+	window.dispatchEvent(
+		new CustomEvent(WALLPAPER_MODE_CHANGE_EVENT, {
+			detail: { mode: getStoredWallpaperMode() },
+		}),
+	);
+}
+
+/**
+ * 半透明卡片是**派生**状态，不由访客直接设置：覆盖透明模式恒开启；
+ * 全屏壁纸只在 `hero` 子布局下开启（`classic` 是揭幕式 hero，内容仍在不透明卡片上）。
+ * 与首屏内联脚本中的同一判定保持一致。
+ */
+export function shouldUseTransparentCards(
+	mode: WallpaperMode,
+	layout: FullscreenLayout,
+): boolean {
+	return mode === "overlay" || (mode === "fullscreen" && layout === "hero");
+}
+
+function applyCardTransparent(): void {
+	document.documentElement.dataset.cardTransparent = String(
+		shouldUseTransparentCards(
+			getStoredWallpaperMode(),
+			getStoredFullscreenLayout(),
+		),
+	);
+}
+
+/* ---------- 覆盖透明参数 ---------- */
+
+function clampToRange(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
+
+function readStoredNumber(key: string, min: number, max: number): number | null {
+	const raw = localStorage.getItem(key);
+	if (raw === null) return null;
+	const parsed = Number.parseFloat(raw);
+	if (Number.isNaN(parsed)) return null;
+	return clampToRange(parsed, min, max);
+}
+
+function readDatasetNumber(
+	name: string,
+	fallback: number,
+	min: number,
+	max: number,
+): number {
+	const raw = document.getElementById("config-carrier")?.dataset[name];
+	if (raw === undefined || raw === "") return clampToRange(fallback, min, max);
+	const parsed = Number.parseFloat(raw);
+	return Number.isNaN(parsed)
+		? clampToRange(fallback, min, max)
+		: clampToRange(parsed, min, max);
+}
+
+export function getDefaultOverlayOpacity(): number {
+	return readDatasetNumber(
+		"overlayOpacity",
+		siteConfig.wallpaperMode.overlay?.opacity ?? 0.8,
+		...WALLPAPER_OVERLAY_OPACITY_RANGE,
+	);
+}
+
+export function getDefaultOverlayBlur(): number {
+	return readDatasetNumber(
+		"overlayBlur",
+		siteConfig.wallpaperMode.overlay?.blur ?? 0,
+		...WALLPAPER_OVERLAY_BLUR_RANGE,
+	);
+}
+
+export function getDefaultOverlayCardOpacity(): number {
+	return readDatasetNumber(
+		"overlayCardOpacity",
+		siteConfig.wallpaperMode.overlay?.cardOpacity ?? 0.6,
+		...WALLPAPER_OVERLAY_CARD_OPACITY_RANGE,
+	);
+}
+
+export function getStoredOverlayOpacity(): number {
+	return (
+		readStoredNumber(WALLPAPER_OVERLAY_OPACITY_KEY, 0, 1) ??
+		getDefaultOverlayOpacity()
+	);
+}
+
+export function getStoredOverlayBlur(): number {
+	return (
+		readStoredNumber(
+			WALLPAPER_OVERLAY_BLUR_KEY,
+			...WALLPAPER_OVERLAY_BLUR_RANGE,
+		) ?? getDefaultOverlayBlur()
+	);
+}
+
+export function getStoredOverlayCardOpacity(): number {
+	return (
+		readStoredNumber(
+			WALLPAPER_OVERLAY_CARD_OPACITY_KEY,
+			...WALLPAPER_OVERLAY_CARD_OPACITY_RANGE,
+		) ?? getDefaultOverlayCardOpacity()
+	);
+}
+
+/** 三个覆盖透明参数一次性落位（与 setTextureOpacity 同构，变量名跟随上游契约） */
+export function setWallpaperOverlay(params: {
+	opacity: number;
+	blur: number;
+	cardOpacity: number;
+}): void {
+	const opacity = clampToRange(params.opacity, 0, 1);
+	const blur = clampToRange(params.blur, 0, 20);
+	const cardOpacity = clampToRange(params.cardOpacity, 0, 1);
+	localStorage.setItem(WALLPAPER_OVERLAY_OPACITY_KEY, String(opacity));
+	localStorage.setItem(WALLPAPER_OVERLAY_BLUR_KEY, String(blur));
+	localStorage.setItem(WALLPAPER_OVERLAY_CARD_OPACITY_KEY, String(cardOpacity));
+	const root = document.documentElement;
+	root.style.setProperty("--overlay-opacity", String(opacity));
+	root.style.setProperty("--overlay-blur", `${blur}px`);
+	root.style.setProperty("--card-transparent-opacity", String(cardOpacity));
+	window.dispatchEvent(
+		new CustomEvent(WALLPAPER_OVERLAY_CHANGE_EVENT, {
+			detail: { opacity, blur, cardOpacity },
+		}),
+	);
+}
+
+/* ---------- 横幅水波纹访客开关 ---------- */
+
+export function getDefaultBannerWavesEnabled(): boolean {
+	const raw =
+		document.getElementById("config-carrier")?.dataset.bannerWavesEnabled;
+	if (raw === "true") return true;
+	if (raw === "false") return false;
+	return siteConfig.banner.waves.enable;
+}
+
+export function getStoredBannerWavesEnabled(): boolean {
+	const raw = localStorage.getItem(BANNER_WAVES_KEY);
+	if (raw === "true") return true;
+	if (raw === "false") return false;
+	return getDefaultBannerWavesEnabled();
+}
+
+export function setBannerWavesEnabled(enabled: boolean): void {
+	localStorage.setItem(BANNER_WAVES_KEY, String(enabled));
+	document.documentElement.dataset.bannerWavesEnabled = String(enabled);
+	window.dispatchEvent(
+		new CustomEvent(BANNER_WAVES_CHANGE_EVENT, { detail: { enabled } }),
 	);
 }
 

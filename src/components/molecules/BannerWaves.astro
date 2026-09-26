@@ -152,6 +152,16 @@ const waveB = buildWavePath({
 	.banner-waves
 		height: clamp(calc(var(--m3e-space-10) + var(--m3e-space-8)), 15vh, calc(var(--m3e-space-10) + var(--m3e-space-10) + var(--m3e-space-10) + var(--m3e-space-8)))
 
+/* 覆盖透明与全屏壁纸（视差）下背景铺满整个视口，波浪没有可衔接的页面底边 */
+:global(html[data-wallpaper-mode="overlay"]) .banner-waves,
+:global(html[data-wallpaper-mode="fullscreen"][data-fullscreen-layout="hero"]) .banner-waves
+	display: none
+
+/* 访客在显示设置中关闭水波纹（站长配置 banner.waves.enable 作为初始默认值）。
+   用 CSS 隐藏而非移除 DOM：SSR 无法读取 localStorage，而开关只需停掉绘制与动画 */
+:global(html[data-banner-waves-enabled="false"]) .banner-waves
+	display: none
+
 :global(html.motion-reduced) .banner-waves__layer
 	animation: none
 

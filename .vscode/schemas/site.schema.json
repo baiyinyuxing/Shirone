@@ -273,10 +273,79 @@
             {
               "type": "string",
               "enum": [
+                "fullscreen"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "overlay"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
                 "none"
               ]
             }
           ]
+        },
+        "defaultFullscreenLayout": {
+          "anyOf": [
+            {},
+            {
+              "type": "string",
+              "enum": [
+                "classic"
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "hero"
+              ]
+            }
+          ],
+          "description": "全屏壁纸的子布局默认值（默认 \"classic\"）"
+        },
+        "overlay": {
+          "anyOf": [
+            {},
+            {
+              "type": "object",
+              "properties": {
+                "opacity": {
+                  "anyOf": [
+                    {},
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "description": "壁纸不透明度，0–1（默认 0.8）"
+                },
+                "blur": {
+                  "anyOf": [
+                    {},
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "description": "背景模糊半径 px，0–20（默认 0）"
+                },
+                "cardOpacity": {
+                  "anyOf": [
+                    {},
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "description": "半透明卡片不透明度，0–1（默认 0.6）"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "覆盖透明模式的默认参数"
         }
       },
       "additionalProperties": false
@@ -479,6 +548,15 @@
               ]
             }
           ]
+        },
+        "brightness": {
+          "anyOf": [
+            {},
+            {
+              "type": "number"
+            }
+          ],
+          "description": "背景图亮度倍率（1–2，默认 1.2）。提高亮度会自动补偿遮罩以维持标题对比度。"
         },
         "dim": {
           "type": "object",
